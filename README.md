@@ -1,16 +1,11 @@
-# budgetly
+# Budgetly
 
-A new Flutter project.
+Application for expense management.
 
-## Getting Started
+- Add/Remove Expenses
+- Modify Expenses
 
-This project is a starting point for a Flutter application.
+Plan to add:
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Convert income from different currencies
+- Select desired currency
