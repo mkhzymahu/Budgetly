@@ -3,6 +3,7 @@ class Expense {
   final String title;
   final double amount;
   final String category;
+  final String currency;
   final DateTime date;
   final bool isIncome;
 
@@ -11,6 +12,7 @@ class Expense {
     required this.title,
     required this.amount,
     required this.category,
+    required this.currency,
     required this.date,
     required this.isIncome,
   });
@@ -27,6 +29,7 @@ class Expense {
       title: title ?? this.title,
       amount: amount ?? this.amount,
       category: category ?? this.category,
+      currency: currency,
       date: date ?? this.date,
       isIncome: isIncome ?? this.isIncome,
     );
@@ -38,6 +41,7 @@ class Expense {
       'title': title,
       'amount': amount,
       'category': category,
+      'currency': currency,
       'date': date.toIso8601String(),
       'isIncome': isIncome,
     };
@@ -49,6 +53,7 @@ class Expense {
       title: map['title'],
       amount: map['amount'],
       category: map['category'],
+      currency: map['currency'] ?? 'USD',
       date: DateTime.parse(map['date']),
       isIncome: map['isIncome'],
     );

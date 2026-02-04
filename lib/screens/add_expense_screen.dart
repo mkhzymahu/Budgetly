@@ -35,6 +35,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       title: _titleController.text.trim(),
       amount: double.parse(_amountController.text),
       category: _selectedCategory,
+      currency: 'INR',
       date: _selectedDate,
       isIncome: _isIncome,
     );

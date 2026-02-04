@@ -5,6 +5,8 @@ import '../utils/date_helpers.dart';
 import '../utils/categories.dart';
 import 'package:intl/intl.dart';
 import 'add_expense_screen.dart';
+import '../widgets/currency_coin.dart';
+import '../widgets/currency_dropdown.dart';
 import '../widgets/edit_expense_modal.dart';
 import 'dart:ui';
 
@@ -23,6 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String? _selectedCategory;
   bool? _selectedType; // null = all, true = income, false = expense
+  
+  // Currency related state
+  String _selectedCurrency = 'INR';
+  bool _isCurrencyMenuOpen = false;
 
   @override
   void initState() {
@@ -43,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Other',
         date: DateTime(2024, 1, 15),
         isIncome: true,
+        currency: 'INR',
       ),
       Expense(
         id: '2',
@@ -51,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Food',
         date: DateTime(2024, 1, 20),
         isIncome: false,
+        currency: 'INR',
       ),
       Expense(
         id: '3',
@@ -59,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Entertainment',
         date: DateTime(2024, 2, 5),
         isIncome: false,
+        currency: 'INR',
       ),
       Expense(
         id: '4',
@@ -67,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Other',
         date: DateTime(2024, 2, 10),
         isIncome: true,
+        currency: 'INR',
       ),
       Expense(
         id: '5',
@@ -75,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Bills',
         date: DateTime(2024, 3, 1),
         isIncome: false,
+        currency: 'INR',
       ),
       Expense(
         id: '6',
@@ -83,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
         category: 'Shopping',
         date: DateTime(2024, 3, 15),
         isIncome: false,
+        currency: 'INR',
       ),
     ];
 
@@ -105,7 +117,9 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            AddExpenseScreen(initialDate: defaultDate),
+            AddExpenseScreen(
+          initialDate: defaultDate,
+        ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0);
           const end = Offset.zero;
@@ -211,21 +225,65 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  double _getTotalIncome(List<Expense> expenses) {
-    return expenses
-        .where((e) => e.isIncome)
-        .fold(0.0, (sum, e) => sum + e.amount);
+  String _formatAmount(double amount, {bool showSymbol = true}) {
+    final currencySymbol = CurrencyUtils.getSymbol(_selectedCurrency);
+    final formattedAmount = NumberFormat.currency(
+      decimalDigits: 2,
+      symbol: showSymbol ? currencySymbol : '',
+    ).format(amount);
+    
+    return formattedAmount;
   }
 
-  double _getTotalExpense(List<Expense> expenses) {
-    return expenses
-        .where((e) => !e.isIncome)
-        .fold(0.0, (sum, e) => sum + e.amount);
+  void _handleCurrencyChange(String newCurrency) {
+    setState(() {
+      _selectedCurrency = newCurrency;
+      _isCurrencyMenuOpen = false;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Currency changed to $newCurrency'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _showCurrencyDropdown() {
+    setState(() {
+      _isCurrencyMenuOpen = true;
+    });
+    
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: CurrencyDropdown(
+            selectedCurrency: _selectedCurrency,
+            onCurrencyChanged: _handleCurrencyChange,
+            onClose: () {
+              setState(() {
+                _isCurrencyMenuOpen = false;
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: TextField(
         controller: _searchController,
         onChanged: (value) {
@@ -262,58 +320,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatItem({
-    required BuildContext context,
-    required String label,
-    required double amount,
-    required IconData icon,
-    required Color color,
-    bool isCount = false,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 14),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          isCount ? amount.toInt().toString() : '₹${amount.toStringAsFixed(0)}',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFilterChips() {
     final filteredExpenses = _getFilteredExpenses();
-    final totalIncome = _getTotalIncome(filteredExpenses);
-    final totalExpense = _getTotalExpense(filteredExpenses);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -354,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Icon(Icons.arrow_upward, size: 14),
                     const SizedBox(width: 4),
-                    Text('Income (₹${_totalIncome.toStringAsFixed(0)})'),
+                    Text('Income (${_formatAmount(_totalIncome)})'),
                   ],
                 ),
                 onSelected: (selected) {
@@ -378,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Icon(Icons.arrow_downward, size: 14),
                     const SizedBox(width: 4),
-                    Text('Expense (₹${_totalExpense.toStringAsFixed(0)})'),
+                    Text('Expense (${_formatAmount(_totalExpense)})'),
                   ],
                 ),
                 onSelected: (selected) {
@@ -408,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: 40,
+            height: 45,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length + 1,
@@ -477,11 +488,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMonthFilter() {
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             const Icon(
@@ -504,12 +515,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(color: Colors.grey.shade300),
                   color: Colors.grey.shade50,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedMonthYear,
                     isExpanded: true,
-                    icon: const Icon(Icons.arrow_drop_down, size: 24),
+                    isDense: true,
+                    icon: const Icon(Icons.arrow_drop_down, size: 20),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: Colors.blue.shade700,
@@ -655,7 +667,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 100, // Reduced height
+        toolbarHeight: 100,
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -694,16 +706,58 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    child: const Icon(
-                      Icons.bar_chart,
-                      color: Colors.white,
-                      size: 20,
+                  
+                  // Currency Coin Button
+                  GestureDetector(
+                    onTap: _showCurrencyDropdown,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Stack(
+                        children: [
+                          // Animated Currency Coin
+                          CurrencyCoin(
+                            currentCurrency: _selectedCurrency,
+                            onTap: _showCurrencyDropdown,
+                            isMenuOpen: _isCurrencyMenuOpen,
+                          ),
+                          
+                          // Currency code badge
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade900,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                _selectedCurrency,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -715,14 +769,14 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: screenHeight - 100, // Account for appbar height
+            minHeight: screenHeight - 100,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Balance Card - Now in body, not appbar
+              // Balance Card
               Container(
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -738,16 +792,48 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Text(
-                      'Available Balance',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Available Balance',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                CurrencyUtils.getFlag(_selectedCurrency),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _selectedCurrency,
+                                style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '₹${_balance.toStringAsFixed(2)}',
+                      _formatAmount(_balance),
                       style: TextStyle(
                         color: _balance >= 0
                             ? Colors.green.shade800
@@ -784,7 +870,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '₹${_totalIncome.toStringAsFixed(2)}',
+                              _formatAmount(_totalIncome),
                               style: TextStyle(
                                 color: Colors.green.shade800,
                                 fontSize: 14,
@@ -821,7 +907,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '₹${_totalExpense.toStringAsFixed(2)}',
+                              _formatAmount(_totalExpense),
                               style: TextStyle(
                                 color: Colors.red.shade800,
                                 fontSize: 14,
@@ -847,9 +933,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Transaction Count Header
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  12,
                 ),
                 child: Row(
                   children: [
@@ -893,12 +981,12 @@ class _HomeScreenState extends State<HomeScreen> {
               // Transaction List or Empty State
               if (filteredExpenses.isEmpty)
                 SizedBox(
-                  height: 200, // Fixed height for empty state
+                  height: 200,
                   child: _buildEmptyState(),
                 )
               else
                 ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   itemCount: filteredExpenses.length,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),

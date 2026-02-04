@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/expense.dart';
+import '../utils/currency_manager.dart';
 
 class ExpenseTile extends StatelessWidget {
   final Expense expense;
@@ -55,11 +56,7 @@ class ExpenseTile extends StatelessWidget {
           if (isLeft)
             const Row(
               children: [
-                Icon(
-                  Icons.edit,
-                  color: Colors.blue,
-                  size: 24,
-                ),
+                Icon(Icons.edit, color: Colors.blue, size: 24),
                 SizedBox(width: 8),
                 Text(
                   'Edit',
@@ -83,11 +80,7 @@ class ExpenseTile extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 8),
-                Icon(
-                  Icons.delete,
-                  color: Colors.red,
-                  size: 24,
-                ),
+                Icon(Icons.delete, color: Colors.red, size: 24),
               ],
             ),
         ],
@@ -159,13 +152,19 @@ class ExpenseTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '${expense.isIncome ? '+' : '-'}₹${expense.amount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: expense.isIncome ? Colors.green : Colors.red,
-                ),
+              ValueListenableBuilder<String>(
+                valueListenable: CurrencyManager.currentCurrency,
+                builder: (_, currency, __) {
+                  final symbol = CurrencyManager.symbols[currency]!;
+                  return Text(
+                    '${expense.isIncome ? '+' : '-'}$symbol${expense.amount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: expense.isIncome ? Colors.green : Colors.red,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 2),
               Text(
@@ -211,7 +210,7 @@ class ExpenseTile extends StatelessWidget {
 
     final lowerText = text.toLowerCase();
     final lowerQuery = searchQuery!.toLowerCase();
-    
+
     if (!lowerText.contains(lowerQuery)) {
       return Text(
         text,
@@ -221,45 +220,37 @@ class ExpenseTile extends StatelessWidget {
       );
     }
 
-    final matches = <TextSpan>[];
+    final spans = <TextSpan>[];
     int start = 0;
-    
+
     while (start < text.length) {
       final index = lowerText.indexOf(lowerQuery, start);
-      
       if (index == -1) {
-        matches.add(TextSpan(
-          text: text.substring(start),
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ));
+        spans.add(TextSpan(text: text.substring(start)));
         break;
       }
-      
+
       if (index > start) {
-        matches.add(TextSpan(
-          text: text.substring(start, index),
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ));
+        spans.add(TextSpan(text: text.substring(start, index)));
       }
-      
-      matches.add(TextSpan(
+
+      spans.add(TextSpan(
         text: text.substring(index, index + searchQuery!.length),
         style: const TextStyle(
-          fontWeight: FontWeight.w500,
           backgroundColor: Colors.yellow,
           color: Colors.black,
         ),
       ));
-      
+
       start = index + searchQuery!.length;
     }
 
     return RichText(
       text: TextSpan(
-        style: DefaultTextStyle.of(context).style.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
-        children: matches,
+        style: DefaultTextStyle.of(context)
+            .style
+            .copyWith(fontWeight: FontWeight.w500),
+        children: spans,
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
@@ -268,17 +259,19 @@ class ExpenseTile extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return 'Today';
     }
-    
+
     final yesterday = DateTime(now.year, now.month, now.day - 1);
-    if (date.year == yesterday.year && 
-        date.month == yesterday.month && 
+    if (date.year == yesterday.year &&
+        date.month == yesterday.month &&
         date.day == yesterday.day) {
       return 'Yesterday';
     }
-    
+
     return '${date.day}/${date.month}/${date.year}';
   }
 
